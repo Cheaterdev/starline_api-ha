@@ -8,7 +8,7 @@ This integration may be unsecure. You can use it, but it's at your own risk.
 ## Features
 Exposes all your Starline devices with GPS coordinates.
 
-## Setup
+## Obtaining App ID and Secret
 1. Go to https://my.starline.ru.
 2. Select "Developer". If there is no such button - change language to "Russian". 
 3. Authorize.
@@ -18,6 +18,9 @@ Exposes all your Starline devices with GPS coordinates.
    If your reqest will be accepted, you'll receive App ID and App Secret, needed to work with this integration.
 5. I don't give any guarantees that Starline will accept your request. So if your request is rejected, you can try https://github.com/Cheaterdev/starline-ha. It works through https://starline-online.ru parsing.
 
+## Setup
+Place "starline_api" folder in **/custom_components** folder
+	
 ```yaml
 # configuration.yaml
 
