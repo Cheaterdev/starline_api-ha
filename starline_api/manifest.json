@@ -1,0 +1,8 @@
+{
+  "domain": "starline_api",
+  "name": "StarlineAPI",
+  "documentation": "",
+  "dependencies": [],
+  "codeowners": ["@cheater.dev"],
+  "requirements": []
+}
