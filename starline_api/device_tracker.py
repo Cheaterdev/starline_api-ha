@@ -33,8 +33,8 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 })
 
 def setup_scanner(hass, config: dict, see, discovery_info=None):
-    StarlineAPIScanner(hass, config, see)
-    return True
+    scanner = StarlineAPIScanner(hass, config, see)
+    return scanner.valid
 
 class StarlineAPIScanner(object):
 
@@ -49,22 +49,22 @@ class StarlineAPIScanner(object):
         self.user_name = config.get(CONF_USERNAME)
         self.user_pass = config.get(CONF_PASSWORD)
 
-        while True:
-            self.session = requests.Session() 
-            try:
-                self.app_code = self.get_app_code(self.app_id, self.app_secret)
-                self.app_token = self.get_app_token(self.app_id, self.app_secret, self.app_code)
-                self.user_slid = self.get_slid_user_token(self.app_token, self.user_name, self.user_pass)
-                self.user_id = self.get_user_id(self.user_slid)       
-                break
-            except Exception as e:
-                _LOGGER.error("error: "  + str(e))
-                time.sleep(5)
-                break
-        #track_utc_time_change(self.hass, self._update_info, minute=range(0, 60, 2))
-        self._update_info()
-        async_track_time_interval(self.hass, self._update_info, config.get(CONF_SCAN_INTERVAL))
-       
+        self.session = requests.Session() 
+        try:
+            self.init_api()
+            self._update_info()
+            async_track_time_interval(self.hass, self._update_info, config.get(CONF_SCAN_INTERVAL))
+            self.valid = True
+        except Exception as e:
+            _LOGGER.error("error setup Starline: "  + str(e))
+            self.valid = False
+
+    def init_api(self):
+        self.app_code = self.get_app_code(self.app_id, self.app_secret)
+        self.app_token = self.get_app_token(self.app_id, self.app_secret, self.app_code)
+        self.user_slid = self.get_slid_user_token(self.app_token, self.user_name, self.user_pass)
+        self.user_id = self.get_user_id(self.user_slid)	
+		
     def get_app_code(self, app_id, app_secret):
         """
         Получение кода приложения для дальнейшего получения токена.
@@ -179,16 +179,23 @@ class StarlineAPIScanner(object):
         response = r.json()
         _LOGGER.debug('response info: {}'.format(r))
         _LOGGER.debug('response data: {}'.format(response))
-        if int(response['code']) == 200:
+        code = int(response['code'])
+        if code == 200:
             devices = response['devices']
-            #_LOGGER.debug('Application token: {}'.format(app_token))
             return devices
-        raise Exception(response)
+        return None
 
     def _update_info(self, now=None):
         
         devices = self.get_devices(self.user_id)
 
+        if devices is None:
+            self.init_api()
+            devices = self.get_devices(self.user_id)
+
+        if devices is None:
+            return True
+			
         for device in devices:
             x = device['position']['x']
             y = device['position']['y']
@@ -221,6 +228,8 @@ class StarlineAPIScanner(object):
                 if alarm_states:
                     attrs.update({ ("alarm_state_"+k): v for k, v in alarm_states.items() })
            
-            self.see(dev_id="starline_" + str(dev_id), gps=(x, y), attributes=attrs)
+            self.see(
+                    dev_id="starline_" + str(dev_id), gps=(x, y), attributes=attrs
+                )
 
         return True
